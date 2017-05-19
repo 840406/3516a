@@ -1,0 +1,1 @@
+cmd_/mnt/hgfs/shared/3516a/adv7619/adv7619.ko := arm-hisiv300-linux-ld -EL -r  -T /work/Hi3516A_SDK_V1.0.7.0/osdrv/opensource/kernel/linux-3.4.y/scripts/module-common.lds --build-id  -o /mnt/hgfs/shared/3516a/adv7619/adv7619.ko /mnt/hgfs/shared/3516a/adv7619/adv7619.o /mnt/hgfs/shared/3516a/adv7619/adv7619.mod.o
