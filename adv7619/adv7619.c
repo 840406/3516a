@@ -50,7 +50,6 @@
 #define EDID_I2C_addr		0x6c
 #define HDMI_I2C_addr		0x68
 #define CP_I2C_addr		0x44
-#define UNKNOWN_I2C_addr		0x72
 
 
 #define    CEC_I2C_Programmed_addr	0xF4
@@ -182,7 +181,7 @@ static struct miscdevice adv7619_dev =
 };
 
 
-static struct i2c_board_info hi_infos[9] =
+static struct i2c_board_info hi_infos[8] =
 {
 	 [0] = { 
 			I2C_BOARD_INFO("adv7619_io", IO_I2C_addr),
@@ -203,14 +202,12 @@ static struct i2c_board_info hi_infos[9] =
 			I2C_BOARD_INFO("adv7619_edid", EDID_I2C_addr),
 		 },
 	 [6] = { 
-			I2C_BOARD_INFO("adv7619_hdmi", HDMI_I2C_addr)
+			I2C_BOARD_INFO("adv7619_hdmi", HDMI_I2C_addr),
 	 	},
 	 [7] = { 
 			I2C_BOARD_INFO("adv7619_cp", CP_I2C_addr),
 	 	},
-	 [8] = { 
-			I2C_BOARD_INFO("adv7619_unknown", UNKNOWN_I2C_addr),
-	 	},
+	
 };
 
 static struct i2c_client* pclient_io;
@@ -221,7 +218,6 @@ static struct i2c_client* pclient_ksv;
 static struct i2c_client* pclient_edid;
 static struct i2c_client* pclient_hdmi;
 static struct i2c_client* pclient_cp;
-static struct i2c_client* pclient_unknown;
 
 
 static int i2c_client_init(void)
@@ -237,8 +233,7 @@ static int i2c_client_init(void)
 	pclient_edid = i2c_new_device(i2c_adap, &hi_infos[5]);
 	pclient_hdmi = i2c_new_device(i2c_adap, &hi_infos[6]);
 	pclient_cp = i2c_new_device(i2c_adap, &hi_infos[7]);
-	pclient_unknown= i2c_new_device(i2c_adap, &hi_infos[8]);
-
+	
 	i2c_put_adapter(i2c_adap);
 
     return 0;
@@ -329,7 +324,7 @@ if(ret < 0)
 {
 	dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 }
-msleep(2);
+msleep(1);
 
 
 
@@ -443,476 +438,295 @@ static int my_adv7619_device_init(void)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_io, 0x01, 0x06) ; // Prim_Mode =110b HDMI-GR
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
-	ret = adv7619_i2c_write(pclient_io, 0x02, 0xF5) ; // Auto CSC, YCrCb out, Set op_656 bit
+	ret = adv7619_i2c_write(pclient_io, 0x02, 0xFD) ; // Auto CSC, YCrCb out, Set op_656 bit  //by cuibo
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
-	ret = adv7619_i2c_write(pclient_io, 0x03, 0x80) ; // 24 bit SDR 422 Mode 0
+	ret = adv7619_i2c_write(pclient_io, 0x03, 0x80) ; // 16 bit SDR 422 Mode 0
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_io, 0x05, 0x28) ; // AV Codes Off
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
-	ret = adv7619_i2c_write(pclient_io, 0x06, 0xA6) ; // Invert VS,HS pins
+	ret = adv7619_i2c_write(pclient_io, 0x06, 0xA0) ; // Invert VS,HS pins
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_io, 0x0C, 0x42) ; // Power up part
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_io, 0x15, 0x80) ; // Disable Tristate of Pins
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_io, 0x19, 0x83) ; // LLC DLL phase
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_io, 0x33, 0x40) ; // LLC DLL MUX enable
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_cp, 0xBA, 0x01) ; // Set HDMI FreeRun
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_cp, 0x6C, 0x00) ; // Required ADI write
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_ksv, 0x40, 0x81) ; // Disable HDCP 1.1 features
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_dpll, 0xB5, 0x01) ; // Setting MCLK to 256Fs
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_hdmi, 0xC0, 0x03) ; // ADI Required write
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_hdmi, 0x00, 0x01) ; // Set HDMI Input Port B (BG_MEAS_PORT_SEL = 000a)
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_hdmi, 0x02, 0x03) ; // ALL BG Ports enabled
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_hdmi, 0x03, 0x98) ; // ADI Required Write
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_hdmi, 0x10, 0xA5) ; // ADI Required Write
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_hdmi, 0x1B, 0x08) ; // ADI Required Write
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_hdmi, 0x45, 0x04) ; // ADI Required Write
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_hdmi, 0x97, 0xC0) ; // ADI Required Write
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_hdmi, 0x3D, 0x10) ; // ADI Required Write
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_hdmi, 0x3E, 0x69) ; // ADI Required Write
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_hdmi, 0x3F, 0x46) ; // ADI Required Write
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_hdmi, 0x4E, 0xFE) ; // ADI Required Write 
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_hdmi, 0x4F, 0x08) ; // ADI Required Write
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_hdmi, 0x50, 0x00) ; // ADI Required Write
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_hdmi, 0x57, 0xA3) ; // ADI Required Write
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_hdmi, 0x58, 0x07) ; // ADI Required Write
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_hdmi, 0x6F, 0x08) ; // ADI Required Write
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_hdmi, 0x83, 0xFC) ; // Enable clock terminators for port A & B
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_hdmi, 0x84, 0x03) ; // ADI Required Write
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_hdmi, 0x85, 0x10) ; // ADI Required Write
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_hdmi, 0x86, 0x9B) ; // ADI Required Write 
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_hdmi, 0x89, 0x03) ; // ADI Required Write 
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_hdmi, 0x9B, 0x03) ; // ADI Required Write
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_hdmi, 0x93, 0x03) ; // ADI Required Write
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_hdmi, 0x5A, 0x80) ; // ADI Required Write
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_hdmi, 0x9C, 0x80) ; // ADI Required Write
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_hdmi, 0x9C, 0xC0) ; // ADI Required Write
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
+	msleep(1);
 
 	ret = adv7619_i2c_write(pclient_hdmi, 0x9C, 0x00) ; // ADI Required Write
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
 	}
-	msleep(2);
-
-	ret = adv7619_i2c_write(pclient_unknown, 0x01, 0x00) ; // Set N Value(6144)
-	if(ret < 0)
-	{
-		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
-	}
-	msleep(2);
-
-	ret = adv7619_i2c_write(pclient_unknown, 0x02, 0x18) ; // Set N Value(6144)
-	if(ret < 0)
-	{
-		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
-	}
-	msleep(2);
-
-	ret = adv7619_i2c_write(pclient_unknown, 0x03, 0x00) ; // Set N Value(6144)
-	if(ret < 0)
-	{
-		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
-	}
-	msleep(2);
-
-	ret = adv7619_i2c_write(pclient_unknown, 0x15, 0x01) ; // Input 422 (YCrCb) with Separate Syncs, 44.1kHz fs
-	if(ret < 0)
-	{
-		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
-	}
-	msleep(2);
-
-	ret = adv7619_i2c_write(pclient_unknown, 0x16, 0xED) ; // YCrCb 422 Style 3
-	if(ret < 0)
-	{
-		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
-	}
-	msleep(2);
-
-	ret = adv7619_i2c_write(pclient_unknown, 0x18, 0x46) ; // CSC disabled
-	if(ret < 0)
-	{
-		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
-	}
-	msleep(2);
-
-	ret = adv7619_i2c_write(pclient_unknown, 0x3B, 0x80) ; // PR Auto Mode
-	if(ret < 0)
-	{
-		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
-	}
-	msleep(2);
-
-	ret = adv7619_i2c_write(pclient_unknown, 0x40, 0x80) ; // General Control Packet Enable
-	if(ret < 0)
-	{
-		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
-	}
-	msleep(2);
-
-	ret = adv7619_i2c_write(pclient_unknown, 0x41, 0x10) ; // Power Down control
-	if(ret < 0)
-	{
-		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
-	}
-	msleep(2);
-
-	ret = adv7619_i2c_write(pclient_unknown, 0x48, 0x08) ; // Data right justified
-	if(ret < 0)
-	{
-		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
-	}
-	msleep(2);
-
-	ret = adv7619_i2c_write(pclient_unknown, 0x49, 0xA8) ; // Set Dither_mode - 12-to-10 bit
-	if(ret < 0)
-	{
-		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
-	}
-	msleep(2);
-
-	ret = adv7619_i2c_write(pclient_unknown, 0x4C, 0x04) ; // 8 bit Output
-	if(ret < 0)
-	{
-		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
-	}
-	msleep(2);
-
-	ret = adv7619_i2c_write(pclient_unknown, 0x55, 0x20) ; // Set YCrCb 422 in AVinfo Frame
-	if(ret < 0)
-	{
-		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
-	}
-	msleep(2);
-
-	ret = adv7619_i2c_write(pclient_unknown, 0x56, 0x08) ; // Set active format Aspect
-	if(ret < 0)
-	{
-		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
-	}
-	msleep(2);
-
-	ret = adv7619_i2c_write(pclient_unknown, 0x96, 0x20) ; // HPD Interrupt clear
-	if(ret < 0)
-	{
-		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
-	}
-	msleep(2);
-
-	ret = adv7619_i2c_write(pclient_unknown, 0x98, 0x03) ; // ADI Required Write
-	if(ret < 0)
-	{
-		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
-	}
-	msleep(2);
-
-	ret = adv7619_i2c_write(pclient_unknown, 0x99, 0x02) ; // ADI Required Write
-	if(ret < 0)
-	{
-		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
-	}
-	msleep(2);
-
-	ret = adv7619_i2c_write(pclient_unknown, 0x9C, 0x30) ; // PLL Filter R1 Value
-	if(ret < 0)
-	{
-		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
-	}
-	msleep(2);
-
-	ret = adv7619_i2c_write(pclient_unknown, 0x9D, 0x61) ; // Set clock divide
-	if(ret < 0)
-	{
-		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
-	}
-	msleep(2);
-
-	ret = adv7619_i2c_write(pclient_unknown, 0xA2, 0xA4) ; // ADI Required Write
-	if(ret < 0)
-	{
-		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
-	}
-	msleep(2);
-
-	ret = adv7619_i2c_write(pclient_unknown, 0xA3, 0xA4) ; // ADI Required Write
-	if(ret < 0)
-	{
-		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
-	}
-	msleep(2);
-
-	ret = adv7619_i2c_write(pclient_unknown, 0xAF, 0x16) ; // Set HDMI Mode
-	if(ret < 0)
-	{
-		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
-	}
-	msleep(2);
-
-	ret = adv7619_i2c_write(pclient_unknown, 0xBA, 0x60) ; // No clock delay
-	if(ret < 0)
-	{
-		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
-	}
-	msleep(2);
-
-	ret = adv7619_i2c_write(pclient_unknown, 0xDE, 0x9C) ; // ADI Required Write
-	if(ret < 0)
-	{
-		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
-	}
-	msleep(2);
-
-	ret = adv7619_i2c_write(pclient_unknown, 0xE4, 0x60) ; // VCO Swing Reference Voltage
-	if(ret < 0)
-	{
-		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
-	}
-	msleep(2);
-
-	ret = adv7619_i2c_write(pclient_unknown, 0xFA, 0x7D) ; // Nbr of times to search for good phase
-	if(ret < 0)
-	{
-		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
-	}
-	msleep(2);
+	msleep(1);
+	
 		
 	return ret;
 }
@@ -967,7 +781,7 @@ static int adv7619_device_init(void)
 		goto EXIT; 
 	}
 
-	//ret = config_edid();
+	ret = config_edid();
 	if(ret < 0)
 	{
 		goto EXIT; 

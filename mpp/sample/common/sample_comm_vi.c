@@ -1006,7 +1006,7 @@ combo_dev_attr_t MIPI_4lane_SENSOR_MN34220_MIPI_12BIT_ATTR =
 combo_dev_attr_t MIPI_BT1120_ATTR =
 {
     /* input mode */
-    .input_mode = INPUT_MODE_BT1120,
+    .input_mode = INPUT_MODE_BT1120,  
     {
 
     }
