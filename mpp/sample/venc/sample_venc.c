@@ -108,7 +108,7 @@ HI_S32 SAMPLE_VENC_1080P_CLASSIC(HI_VOID)
     else
     {
         //s32ChnNum = 3;
-        s32ChnNum = 1;  //by cuibo
+        s32ChnNum = 2;  //by cuibo
     }
 
     /******************************************
@@ -141,12 +141,13 @@ HI_S32 SAMPLE_VENC_1080P_CLASSIC(HI_VOID)
                  enSize[1], SAMPLE_PIXEL_FORMAT, SAMPLE_SYS_ALIGN_WIDTH);
     stVbConf.astCommPool[1].u32BlkSize = u32BlkSize;
     stVbConf.astCommPool[1].u32BlkCnt = 20;
+#endif	
 
     u32BlkSize = SAMPLE_COMM_SYS_CalcPicVbBlkSize(gs_enNorm, \
                  enSize[2], SAMPLE_PIXEL_FORMAT, SAMPLE_SYS_ALIGN_WIDTH);
     stVbConf.astCommPool[2].u32BlkSize = u32BlkSize;
     stVbConf.astCommPool[2].u32BlkCnt = 20;
-#endif
+
 
     /******************************************
      step 2: mpp system init.
@@ -243,12 +244,15 @@ HI_S32 SAMPLE_VENC_1080P_CLASSIC(HI_VOID)
         goto END_VENC_1080P_CLASSIC_4;
     }
 
-    if ((SONY_IMX178_LVDS_5M_30FPS != SENSOR_TYPE)
+#endif
+
+	if ((SONY_IMX178_LVDS_5M_30FPS != SENSOR_TYPE)
         && (APTINA_AR0330_MIPI_1536P_25FPS != SENSOR_TYPE)
         && (APTINA_AR0330_MIPI_1296P_25FPS != SENSOR_TYPE))
     {
 
-        VpssChn = 2;
+        //VpssChn = 2;  
+	VpssChn = 1;  //by cuibo
         stVpssChnMode.enChnMode 	= VPSS_CHN_MODE_USER;
         stVpssChnMode.bDouble		= HI_FALSE;
         stVpssChnMode.enPixelFormat = SAMPLE_PIXEL_FORMAT;
@@ -266,7 +270,7 @@ HI_S32 SAMPLE_VENC_1080P_CLASSIC(HI_VOID)
             goto END_VENC_1080P_CLASSIC_4;
         }
     }
-#endif
+
 	
     /******************************************
      step 5: start stream venc
@@ -333,12 +337,15 @@ HI_S32 SAMPLE_VENC_1080P_CLASSIC(HI_VOID)
         SAMPLE_PRT("Start Venc failed!\n");
         goto END_VENC_1080P_CLASSIC_5;
     }
+#endif
 
     /*** D1 **/
     if (SONY_IMX178_LVDS_5M_30FPS != SENSOR_TYPE)
     {
-        VpssChn = 2;
-        VencChn = 2;
+        //VpssChn = 2;
+        //VencChn = 2;
+	VpssChn = 1;	//  by cuibo
+        VencChn = 1;	//  by cuibo
         s32Ret = SAMPLE_COMM_VENC_Start(VencChn, enPayLoad[2], \
                                         gs_enNorm, enSize[2], enRcMode, u32Profile);
         if (HI_SUCCESS != s32Ret)
@@ -354,7 +361,7 @@ HI_S32 SAMPLE_VENC_1080P_CLASSIC(HI_VOID)
             goto END_VENC_1080P_CLASSIC_5;
         }
     }
-#endif
+
 	
     /******************************************
      step 6: stream venc process -- get stream, then save it to file.

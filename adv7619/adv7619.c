@@ -429,7 +429,7 @@ static void i2c_client_exit(void)
 	i2c_unregister_device(pclient_cp);
 }
 
-static int my_adv7619_device_init(void)
+static int adv7619_config_device(void)
 {
 	int ret = 0;
 
@@ -468,7 +468,7 @@ static int my_adv7619_device_init(void)
 	}
 	msleep(1);
 
-	ret = adv7619_i2c_write(pclient_io, 0x06, 0xA0) ; // Invert VS,HS pins
+	ret = adv7619_i2c_write(pclient_io, 0x06, 0xA0) ; //  VS,HS pins
 	if(ret < 0)
 	{
 		dbg_print("adv7619_i2c_write is failed, errornum == %d\n", ret);
@@ -735,67 +735,21 @@ static int adv7619_device_init(void)
 {
 	int ret = 0;
 
-	ret = adv7619_i2c_write(pclient_hdmi, 0xc0,  0x03); 
+	ret =adv7619_config_device();
 	if(ret < 0)
 	{
-		dbg_print("adv7619_i2c_write pclient_io is failed, errornum == %d\n", ret);
-		goto EXIT;
+		return ret;
 	}
-	msleep(5);
-		
-	ret = config_reg(pclient_io, io_addr_val);
-	if(ret < 0)
-	{
-		goto EXIT; 
-	}
-
-	ret = config_reg(pclient_cp, cp_addr_val);
-	if(ret < 0)
-	{
-		goto EXIT; 
-	}
-
-	ret = config_reg(pclient_ksv, ksv_addr_val);
-	if(ret < 0)
-	{
-		goto EXIT; 
-	}
-
-	ret = config_reg(pclient_dpll, dpll_addr_val);
-	if(ret < 0)
-	{
-		goto EXIT; 
-	}
-
-	ret = adv7619_i2c_write(pclient_hdmi, 0xc0,  0x03); 
-	if(ret < 0)
-	{
-		dbg_print("adv7619_i2c_write pclient_io is failed, errornum == %d\n", ret);
-		goto EXIT;
-	}
-	msleep(5);
 	
-	ret = config_reg(pclient_hdmi, hdmi_addr_val);
-	if(ret < 0)
-	{
-		goto EXIT; 
-	}
-
+/*
 	ret = config_edid();
 	if(ret < 0)
 	{
-		goto EXIT; 
+		return ret;
 	}
-	msleep(5);
-
-	ret = adv7619_i2c_write(pclient_io, 0x20,  0xf0); 
-	if(ret < 0)
-	{
-		dbg_print("adv7619_i2c_write pclient_io is failed, errornum == %d\n", ret);
-		goto EXIT;
-	}
-
-EXIT:	
+	
+*/
+	
 	return ret;
 }
 
@@ -820,7 +774,7 @@ static int  adv7619_init(void)
 		goto init_fail;
 	}	
 
-	ret = my_adv7619_device_init();
+	ret = adv7619_device_init();
 	if(ret < 0)
 	{
 		goto init_fail;
