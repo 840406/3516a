@@ -30,6 +30,7 @@
 #include <math.h>
 #include <sys/file.h>
 #include <sys/time.h>
+#include <poll.h>
 
 #include "sample_comm.h"
 
@@ -46,7 +47,7 @@ typedef int                     s32;
 #define DBG_WARNING        3
 #define DBG_ERROR        4
 #define DBG_FATAL        5
-#define DBG_LEVEL        DBG_INFO
+#define DBG_LEVEL        DBG_DETAILED
 #define dbg_printf(level, fmt,args...) if(level>=DBG_LEVEL){\
 								printf("[%s:%d]: "fmt,__func__, __LINE__, ##args);  \
 								}
@@ -71,7 +72,8 @@ typedef enum Opt{
 typedef struct Package{
 	ChType enChType;
 	Opt       enOpt;
-	PIC_SIZE_E  enPicSize;
+	PIC_SIZE_E  enHDPicSize;
+	PIC_SIZE_E  enSDPicSize;
 	s32    s32VideoChNum;
 }Package;
 

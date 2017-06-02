@@ -4,7 +4,8 @@
 //#include "sample_comm.h"
 
 
-#define  SERVERPORT     8888
+#define  SERVERPORT     8809
+#define  CHNUM		5
 
 
 typedef struct my_sample_venc_getstream_s
@@ -12,6 +13,7 @@ typedef struct my_sample_venc_getstream_s
     HI_BOOL bThreadStart;
     HI_S32  s32Cnt;
 	s32 s32HDVideoDataFd;
+	s32 s32SDVideoDataFd;
 } my_SAMPLE_VENC_GETSTREAM_PARA_S;
 
 
@@ -20,6 +22,7 @@ my_SAMPLE_VENC_GETSTREAM_PARA_S my_gs_stPara;
 VIDEO_NORM_E gs_enNorm = VIDEO_ENCODING_MODE_NTSC;
 s32 g_StopVideoThread = 0;
 pthread_t g_VideoThread_t;
+pthread_t g_VencPid;
 
 pthread_t CreatePthread(Fun SFun, void* args)
 {
@@ -112,81 +115,13 @@ int  CreateSocket(unsigned int port)
 	return sockfd;
 }
 
-s32 GetConFdAndChannalType(const s32 s32ListenFd, u32* pu32Type)
-{
-	s32 s32ConFd;
-	s8  as8Buf[50] = {0};
-	Package stPackage= {0};
-	struct sockaddr_un addrcli = {0};
-	socklen_t addrlen = sizeof (addrcli);
-
-	if(s32ListenFd<=0 ||NULL == pu32Type)
-	{
-		return -1;
-	}
-		
-	s32ConFd = accept (s32ListenFd, (struct sockaddr*)&addrcli,&addrlen);
-	if (s32ConFd == -1) 
-	{
-		dbg_perror ("accept");
-		return -1;
-	}
-
-	printf("6666-%d\n", s32ConFd);
-	if(-1 == recv(s32ConFd, as8Buf, sizeof(as8Buf), 0))
-	{
-		dbg_perror("send");
-		return -1;
-	}
-	
-	if(NULL == strstr(as8Buf, "Hello"))
-	{
-		return -1;
-	}
-	
-	if(-1 ==send(s32ConFd, "who", strlen("who"), 0))//who are you
-	{
-		dbg_perror("send");
-		return -1;
-	}
-
-	if(-1 == recv(s32ConFd, &stPackage, sizeof(Package), 0))
-	{
-		dbg_perror("send");
-		return -1;
-	}
-
-	
-	if(CMD == stPackage.enChType)
-	{
-		*pu32Type = CMD;
-	}
-	else if(HDVIDEODATA == stPackage.enChType)
-	{
-		*pu32Type = HDVIDEODATA;
-	}
-	else if(SDVIDEODATA == stPackage.enChType)
-	{
-		*pu32Type = SDVIDEODATA;
-	}
-	else
-	{
-		dbg_printf(DBG_ERROR, "can not get  stCmd.enChType\n");
-		return -1;
-	}
-
-	dbg_printf(DBG_INFO, "222222222  pu32Type == %d\n", *pu32Type);
-	
-	return s32ConFd;
-}
-
-s32 SendStream(s32 s32HDVideoDataFd,  VENC_STREAM_S* pstStream)
+s32 SendStream(s32 s32VideoDataFd,  VENC_STREAM_S* pstStream)
 {
 	s32 i;
 	s32 s32Ret;
 	for (i = 0; i < pstStream->u32PackCount; i++)
 	{
-		s32Ret = send(s32HDVideoDataFd, pstStream->pstPack[i].pu8Addr + pstStream->pstPack[i].u32Offset, \
+		s32Ret = send(s32VideoDataFd, pstStream->pstPack[i].pu8Addr + pstStream->pstPack[i].u32Offset, \
 									pstStream->pstPack[i].u32Len - pstStream->pstPack[i].u32Offset, 0);
 		if(-1 == s32Ret)
 		{
@@ -194,8 +129,18 @@ s32 SendStream(s32 s32HDVideoDataFd,  VENC_STREAM_S* pstStream)
 			return -1;
 		}
 	}
-
+	//printf("k7777777\n");
 	return 0;
+}
+
+HI_S32 my_SAMPLE_COMM_VENC_StopGetStream()
+{
+    if (HI_TRUE == my_gs_stPara.bThreadStart)
+    {
+        my_gs_stPara.bThreadStart = HI_FALSE;
+       pthread_join(g_VencPid, 0);
+    }
+    return HI_SUCCESS;
 }
 
 
@@ -204,27 +149,24 @@ s32 SendStream(s32 s32HDVideoDataFd,  VENC_STREAM_S* pstStream)
 ******************************************************************************/
 HI_VOID* my_SAMPLE_COMM_VENC_GetVencStreamProc(HI_VOID* p)
 {
-    HI_S32 i;
+  HI_S32 i;
     HI_S32 s32ChnTotal;
-	s32 s32HDVideoDataFd;
-    //VENC_CHN_ATTR_S stVencChnAttr;
+	//s32 s32HDVideoDataFd;
+	//s32 s32SDVideoDataFd;
     my_SAMPLE_VENC_GETSTREAM_PARA_S* pstPara;
     HI_S32 maxfd = 0;
     struct timeval TimeoutVal;
     fd_set read_fds;
     HI_S32 VencFd[VENC_MAX_CHN_NUM];
-    //HI_CHAR aszFileName[VENC_MAX_CHN_NUM][FILE_NAME_LEN];
-    FILE* pFile[VENC_MAX_CHN_NUM];
-//    char szFilePostfix[10];
+ s32 as32VideoDataFd[VENC_MAX_CHN_NUM];
     VENC_CHN_STAT_S stStat;
     VENC_STREAM_S stStream;
     HI_S32 s32Ret;
-//    VENC_CHN VencChn;
-   // PAYLOAD_TYPE_E enPayLoadType[VENC_MAX_CHN_NUM];
 
     pstPara = (my_SAMPLE_VENC_GETSTREAM_PARA_S*)p;
     s32ChnTotal = pstPara->s32Cnt;
-s32HDVideoDataFd = pstPara->s32HDVideoDataFd;
+	as32VideoDataFd[0] = pstPara->s32HDVideoDataFd;
+	as32VideoDataFd[1] = pstPara->s32SDVideoDataFd;
 
     /******************************************
      step 1:  check & prepare save-file & venc-fd
@@ -235,37 +177,7 @@ s32HDVideoDataFd = pstPara->s32HDVideoDataFd;
         return NULL;
     }
     for (i = 0; i < s32ChnTotal; i++)
-    {
-        /* decide the stream file name, and open file to save stream */
-        
-#if 0
-	VencChn = i;	
-        s32Ret = HI_MPI_VENC_GetChnAttr(VencChn, &stVencChnAttr);
-        if (s32Ret != HI_SUCCESS)
-        {
-            SAMPLE_PRT("HI_MPI_VENC_GetChnAttr chn[%d] failed with %#x!\n", \
-                       VencChn, s32Ret);
-            return NULL;
-        }
-        enPayLoadType[i] = stVencChnAttr.stVeAttr.enType;
-
-        s32Ret = SAMPLE_COMM_VENC_GetFilePostfix(enPayLoadType[i], szFilePostfix);
-        if (s32Ret != HI_SUCCESS)
-        {
-            SAMPLE_PRT("SAMPLE_COMM_VENC_GetFilePostfix [%d] failed with %#x!\n", \
-                       stVencChnAttr.stVeAttr.enType, s32Ret);
-            return NULL;
-        }
-        snprintf(aszFileName[i], FILE_NAME_LEN, "stream_chn%d%s", i, szFilePostfix);
-        pFile[i] = fopen(aszFileName[i], "wb");
-        if (!pFile[i])
-        {
-            SAMPLE_PRT("open file[%s] failed!\n",
-                       aszFileName[i]);
-            return NULL;
-        }
-#endif
-
+    {	
         /* Set Venc Fd. */
         VencFd[i] = HI_MPI_VENC_GetFd(i);
         if (VencFd[i] < 0)
@@ -285,6 +197,7 @@ s32HDVideoDataFd = pstPara->s32HDVideoDataFd;
     ******************************************/
     while (HI_TRUE == pstPara->bThreadStart)
     {
+    	printf("pstPara->bThreadStart == %d\n", pstPara->bThreadStart);
         FD_ZERO(&read_fds);
         for (i = 0; i < s32ChnTotal; i++)
         {
@@ -321,19 +234,19 @@ s32HDVideoDataFd = pstPara->s32HDVideoDataFd;
                         break;
                     }
 					
-					/*******************************************************
-					 step 2.2 :suggest to check both u32CurPacks and u32LeftStreamFrames at the same time,for example:
-					 if(0 == stStat.u32CurPacks || 0 == stStat.u32LeftStreamFrames)
-					 {
-						SAMPLE_PRT("NOTE: Current  frame is NULL!\n");
-						continue;
-					 }
-					*******************************************************/
-					if(0 == stStat.u32CurPacks)
-					{
-						  SAMPLE_PRT("NOTE: Current  frame is NULL!\n");
-						  continue;
-					}
+			/*******************************************************
+			 step 2.2 :suggest to check both u32CurPacks and u32LeftStreamFrames at the same time,for example:
+			 if(0 == stStat.u32CurPacks || 0 == stStat.u32LeftStreamFrames)
+			 {
+				SAMPLE_PRT("NOTE: Current  frame is NULL!\n");
+				continue;
+			 }
+			*******************************************************/
+			if(0 == stStat.u32CurPacks)
+			{
+				  SAMPLE_PRT("NOTE: Current  frame is NULL!\n");
+				  continue;
+			}
                     /*******************************************************
                      step 2.3 : malloc corresponding number of pack nodes.
                     *******************************************************/
@@ -361,18 +274,8 @@ s32HDVideoDataFd = pstPara->s32HDVideoDataFd;
                     /*******************************************************
                      step 2.5 : send stream
                     *******************************************************/
-                   #if 0
-                    s32Ret = SAMPLE_COMM_VENC_SaveStream(enPayLoadType[i], pFile[i], &stStream);
-                    if (HI_SUCCESS != s32Ret)
-                    {
-                        free(stStream.pstPack);
-                        stStream.pstPack = NULL;
-                        SAMPLE_PRT("save stream failed!\n");
-                        break;
-                    }
-		 #endif
-
-		  s32Ret = SendStream(s32HDVideoDataFd, &stStream);
+                    printf("00000---i == %d\n", i);
+		  s32Ret = SendStream(as32VideoDataFd[i], &stStream);
 		  if (HI_SUCCESS != s32Ret)
                    {
                         free(stStream.pstPack);
@@ -390,6 +293,7 @@ s32HDVideoDataFd = pstPara->s32HDVideoDataFd;
                         stStream.pstPack = NULL;
                         break;
                     }
+					
                     /*******************************************************
                      step 2.7 : free pack nodes
                     *******************************************************/
@@ -403,13 +307,11 @@ s32HDVideoDataFd = pstPara->s32HDVideoDataFd;
     /*******************************************************
     * step 3 : close save-file
     *******************************************************/
-    for (i = 0; i < s32ChnTotal; i++)
-    {
-        fclose(pFile[i]);
-    }
 
+	printf("quit my_SAMPLE_COMM_VENC_GetVencStreamProc !!!\n");
     return NULL;
 }
+
 
 
 /******************************************************************************
@@ -418,13 +320,12 @@ s32HDVideoDataFd = pstPara->s32HDVideoDataFd;
 void* my_SAMPLE_VENC_1080P_CLASSIC(void* pArgs)
 {
 	Args* pstThreadArg = (Args*)pArgs;
-
-	pthread_t VencPid;
+	
 	PAYLOAD_TYPE_E enHDPayLoad = PT_H264;
 	PAYLOAD_TYPE_E enSDPayLoad = PT_H264;
 
-	PIC_SIZE_E enHDSize = pstThreadArg->enHDPicSize;
-	PIC_SIZE_E enSDSize = pstThreadArg->enSDPicSize;
+	PIC_SIZE_E enHDSize = PIC_HD1080; //pstThreadArg->enHDPicSize;
+	PIC_SIZE_E enSDSize = PIC_D1;  //pstThreadArg->enSDPicSize;
 
    // PAYLOAD_TYPE_E enPayLoad[3] = {PT_H264, PT_H265, PT_H264};
    // PIC_SIZE_E enSize[3] = {PIC_HD1080, PIC_HD1080, PIC_D1};
@@ -448,8 +349,7 @@ void* my_SAMPLE_VENC_1080P_CLASSIC(void* pArgs)
     HI_U32 u32BlkSize;
     SIZE_S stHDSize;
 	SIZE_S stSDSize;
-   // char c;
-
+  
 	SAMPLE_VI_MODE_E SENSOR_TYPE = SAMPLE_VI_MODE_BT1120_1080P; 
 
     /******************************************
@@ -457,9 +357,9 @@ void* my_SAMPLE_VENC_1080P_CLASSIC(void* pArgs)
     ******************************************/
     memset(&stVbConf, 0, sizeof(VB_CONF_S));
 
-    SAMPLE_COMM_VI_GetSizeBySensor(&enHDSize);
-
+  
     stVbConf.u32MaxPoolCnt = 128;
+
 
     /*video buffer*/
     u32BlkSize = SAMPLE_COMM_SYS_CalcPicVbBlkSize(gs_enNorm, \
@@ -468,7 +368,7 @@ void* my_SAMPLE_VENC_1080P_CLASSIC(void* pArgs)
     stVbConf.astCommPool[0].u32BlkCnt = 20;
 
 	
-
+	
     u32BlkSize = SAMPLE_COMM_SYS_CalcPicVbBlkSize(gs_enNorm, \
                  enSDSize, SAMPLE_PIXEL_FORMAT, SAMPLE_SYS_ALIGN_WIDTH);
     stVbConf.astCommPool[2].u32BlkSize = u32BlkSize;
@@ -552,7 +452,7 @@ void* my_SAMPLE_VENC_1080P_CLASSIC(void* pArgs)
         SAMPLE_PRT("Enable vpss chn failed!\n");
         goto END_VENC_1080P_CLASSIC_4;
     }
-	
+
     s32Ret = SAMPLE_COMM_SYS_GetPicSize(gs_enNorm, enSDSize, &stSDSize);
     if (HI_SUCCESS != s32Ret)
     {
@@ -577,40 +477,12 @@ void* my_SAMPLE_VENC_1080P_CLASSIC(void* pArgs)
             SAMPLE_PRT("Enable vpss chn failed!\n");
             goto END_VENC_1080P_CLASSIC_4;
         }
-    
-
+	  
 	
     /******************************************
      step 5: start stream venc
     ******************************************/
-    
-#if 0	
-    printf("\t c) cbr.\n");
-    printf("\t v) vbr.\n");
-	printf("\t a) Avbr.\n");
-    printf("\t f) fixQp\n");
-    printf("please input choose rc mode!\n");
-    c = (char)getchar();
-    switch (c)
-    {
-        case 'c':
-            enRcMode = SAMPLE_RC_CBR;
-            break;
-        case 'v':
-            enRcMode = SAMPLE_RC_VBR;
-            break;
-					
-        case 'a':
-            enRcMode = SAMPLE_RC_AVBR;
-            break;
-        case 'f':
-            enRcMode = SAMPLE_RC_FIXQP;
-            break;
-        default:
-            printf("rc mode! is invaild!\n");
-            goto END_VENC_1080P_CLASSIC_4;
-    }
-#endif
+
 	/*** HD1080P **/
     VpssGrp = 0;
     VpssChn = 0;
@@ -623,13 +495,13 @@ void* my_SAMPLE_VENC_1080P_CLASSIC(void* pArgs)
         goto END_VENC_1080P_CLASSIC_5;
     }
 
+	
     s32Ret = SAMPLE_COMM_VENC_BindVpss(VencChn, VpssGrp, VpssChn);
     if (HI_SUCCESS != s32Ret)
     {
         SAMPLE_PRT("Start Venc failed!\n");
         goto END_VENC_1080P_CLASSIC_5;
     }
-
 
  	   /*** D1 **/
 	VpssChn = 1;	
@@ -641,27 +513,24 @@ void* my_SAMPLE_VENC_1080P_CLASSIC(void* pArgs)
 	    SAMPLE_PRT("Start Venc failed!\n");
 	    goto END_VENC_1080P_CLASSIC_5;
 	}
-
 	s32Ret = SAMPLE_COMM_VENC_BindVpss(VencChn, VpssGrp, VpssChn);
 	if (HI_SUCCESS != s32Ret)
 	{
 	    SAMPLE_PRT("Start Venc failed!\n");
 	    goto END_VENC_1080P_CLASSIC_5;
 	}
-    
+  
 	
     /******************************************
      step 6: stream venc process -- get stream, then save it to file.
     ******************************************/
-    my_gs_stPara.bThreadStart = HI_TRUE;
-    my_gs_stPara.s32Cnt = s32ChnNum;
+	my_gs_stPara.bThreadStart = HI_TRUE;
+	my_gs_stPara.s32Cnt = s32ChnNum;
 	my_gs_stPara.s32HDVideoDataFd = pstThreadArg->s32HDVideoDataFd;
-     pthread_create(&VencPid, 0, my_SAMPLE_COMM_VENC_GetVencStreamProc, (HI_VOID*)&my_gs_stPara);
+	my_gs_stPara.s32SDVideoDataFd = pstThreadArg->s32SDVideoDataFd;
+	pthread_create(&g_VencPid, 0, my_SAMPLE_COMM_VENC_GetVencStreamProc, (HI_VOID*)&my_gs_stPara);
 
 
-  //  printf("please press twice ENTER to exit this sample\n");
-   // getchar();
-   // getchar();
    while(0 == g_StopVideoThread)
    {
 	sleep(1);	
@@ -669,9 +538,9 @@ void* my_SAMPLE_VENC_1080P_CLASSIC(void* pArgs)
 
     /******************************************
      step 7: exit process
-    ******************************************/
-    SAMPLE_COMM_VENC_StopGetStream();
-
+    ******************************************/	
+    my_SAMPLE_COMM_VENC_StopGetStream();
+	
 END_VENC_1080P_CLASSIC_5:
     VpssGrp = 0;
 
@@ -679,36 +548,12 @@ END_VENC_1080P_CLASSIC_5:
     VencChn = 0;
     SAMPLE_COMM_VENC_UnBindVpss(VencChn, VpssGrp, VpssChn);
     SAMPLE_COMM_VENC_Stop(VencChn);
-#if 0 //by cuibo
-    VpssChn = 1;
-    VencChn = 1;
-    SAMPLE_COMM_VENC_UnBindVpss(VencChn, VpssGrp, VpssChn);
-    SAMPLE_COMM_VENC_Stop(VencChn);
-
-
-    if (SONY_IMX178_LVDS_5M_30FPS != SENSOR_TYPE)
-    {
-        VpssChn = 2;
-        VencChn = 2;
-        SAMPLE_COMM_VENC_UnBindVpss(VencChn, VpssGrp, VpssChn);
-        SAMPLE_COMM_VENC_Stop(VencChn);
-    }
-#endif 
     SAMPLE_COMM_VI_UnBindVpss(stViConfig.enViMode);
 END_VENC_1080P_CLASSIC_4:	//vpss stop
     VpssGrp = 0;
     VpssChn = 0;
     SAMPLE_COMM_VPSS_DisableChn(VpssGrp, VpssChn);
 
-#if 0	//by cuibo
-    VpssChn = 1;
-    SAMPLE_COMM_VPSS_DisableChn(VpssGrp, VpssChn);
-    if (SONY_IMX178_LVDS_5M_30FPS != SENSOR_TYPE)
-    {
-        VpssChn = 2;
-        SAMPLE_COMM_VPSS_DisableChn(VpssGrp, VpssChn);
-    }
-#endif
 	
 END_VENC_1080P_CLASSIC_3:    //vpss stop
     SAMPLE_COMM_VI_UnBindVpss(stViConfig.enViMode);
@@ -722,11 +567,135 @@ END_VENC_1080P_CLASSIC_0:	//system exit
     return NULL;
 }
 
+s32 ParamAndExcuteCmd(s32 s32CmdFd, const Package* pstPackage)
+{	
+	s32 s32Ret;
+	if(NULL == pstPackage)
+	{
+		return -1;
+	}
+
+	printf("---pstPackage.enChType ==%d, pstCmd.enOpt == %d\n",pstPackage->enChType, pstPackage->enOpt);
+
+	if(CMD == pstPackage->enChType && StartVideo ==pstPackage->enOpt)
+	{
+		stArgs.enHDPicSize = pstPackage->enHDPicSize;
+		stArgs.enSDPicSize = pstPackage->enSDPicSize;
+		stArgs.s32VideoChNum = pstPackage->s32VideoChNum;
+		g_VideoThread_t = CreatePthread(my_SAMPLE_VENC_1080P_CLASSIC, &stArgs);
+
+		//g_VideoThread_t = CreatePthread(TestThread, &stArgs);	
+		
+	}
+
+	if(CMD == pstPackage->enChType && StopVideo ==pstPackage->enOpt)
+	{
+		s32Ret = pthread_kill(g_VideoThread_t, SIGUSR1);
+		if(ESRCH == s32Ret)
+		{
+			dbg_printf(DBG_ERROR, "the thread is not exist !!!\n");
+			return -1;
+		}
+		else if(EINVAL== s32Ret)
+		{
+			dbg_printf(DBG_ERROR, "the SIG is wrong !!!\n");
+			return -1;
+		}
+	}
+	
+	return 0;
+}
+
+
+s32 GetCmdAndChannalType(const s32 s32ConFd)
+{
+	s32 s32Ret;
+	Package stPackage= {0};
+
+	if(s32ConFd <= 0 )
+	{
+		return -1;
+	}		
+	s32Ret = recv(s32ConFd, &stPackage, sizeof(stPackage), 0);
+	if(-1 == s32Ret)
+	{
+		dbg_perror("recv");
+		return -1;
+	}
+	else if(0 == s32Ret)
+	{
+		return 0;
+	}
+	else
+	{
+		if(HDVIDEODATA == stPackage.enChType)
+		{
+			stArgs.s32HDVideoDataFd = s32ConFd;
+		
+			if(-1 == send(s32ConFd, "OK" ,strlen("OK"), 0) )
+			{
+				dbg_perror("send");
+				return -1;
+			}
+		}
+		else if(SDVIDEODATA == stPackage.enChType)
+		{
+			stArgs.s32SDVideoDataFd = s32ConFd;
+			
+			if(-1 == send(s32ConFd, "OK" ,strlen("OK"), 0) )
+			{
+				dbg_perror("send");
+				return -1;
+			}
+		}	
+		else if(HEART == stPackage.enChType)
+		{
+			if(-1 == send(s32ConFd, "OK" ,strlen("OK"), 0) )
+			{
+				dbg_perror("send");
+				return -1;
+			}
+			dbg_printf(DBG_DETAILED, "this is heart\n");
+		}
+		else if(CMD == stPackage.enChType && 0 != stPackage.enOpt)
+		{
+			if(-1 == ParamAndExcuteCmd(s32ConFd, &stPackage))
+			{
+				dbg_printf(DBG_ERROR, "can not excute the cmd !!!\n");
+			}
+			
+			if(-1 == send(s32ConFd, "OK" ,strlen("OK"), 0) )
+			{
+				dbg_perror("send");
+				return -1;
+			}
+		}
+		else if(CMD == stPackage.enChType)
+		{
+			if(-1 == send(s32ConFd, "OK" ,strlen("OK"), 0) )
+			{
+				dbg_perror("send");
+				return -1;
+			}
+		}
+		else
+		{
+			dbg_printf(DBG_ERROR, "get wrong  Cmd\n");
+			return -1;
+		}
+
+		//dbg_printf(DBG_DETAILED, "222222222  pu32Type == %d\n", stPackage.enChType);
+		
+	}
+
+	return s32ConFd;
+}
+
 
 void* TestThread(void* args)
 {
 	Args* pstArg = (Args*)args;
-	s32 fd = pstArg->s32HDVideoDataFd;
+	//s32 fd = pstArg->s32HDVideoDataFd;
 	s32 s32Ret =0 ;
 	s8 as8Buf1[100] = {0};
 	s8 as8Buf2[100] = {0};
@@ -761,45 +730,6 @@ void* TestThread(void* args)
 	
 }
 
-s32 ParamAndExcuteCmd(const Package* pstPackage)
-{	
-	s32 s32Ret;
-	if(NULL == pstPackage)
-	{
-		return -1;
-	}
-
-	printf("---pstPackage.enChType ==%d, pstCmd.enOpt == %d\n",pstPackage->enChType, pstPackage->enOpt);
-
-	if(CMD == pstPackage->enChType && StartVideo ==pstPackage->enOpt)
-	{
-		stArgs.enHDPicSize = pstPackage->enPicSize;
-		stArgs.enSDPicSize = pstPackage->enPicSize;
-		stArgs.s32VideoChNum = pstPackage->s32VideoChNum;
-		//g_VideoThread_t = CreatePthread(my_SAMPLE_VENC_1080P_CLASSIC, &stArgs);
-
-		g_VideoThread_t = CreatePthread(TestThread, &stArgs);
-	
-	}
-
-	if(CMD == pstPackage->enChType && StopVideo ==pstPackage->enOpt)
-	{
-		s32Ret = pthread_kill(g_VideoThread_t, SIGUSR1);
-		if(ESRCH == s32Ret)
-		{
-			dbg_printf(DBG_ERROR, "the thread is not exist !!!\n");
-		}
-		else if(EINVAL== s32Ret)
-		{
-			dbg_printf(DBG_ERROR, "the SIG is wrong !!!\n");
-		}
-
-		return -1;
-	}
-
-	return 0;
-}
-
 void SAMPLE_VENC_HandleSig(HI_S32 signo)
 {
     if (SIGINT == signo || SIGTERM == signo)
@@ -817,39 +747,81 @@ void SAMPLE_VENC_HandleSig(HI_S32 signo)
     
 }
 
+s32 InitFdSet(struct pollfd* pstFds, const u32 u32Num)
+{
+	s32 i;
+	
+	if(NULL == pstFds ||0== u32Num)
+	{
+		return -1;
+	}
+	
+	for(i=0; i<u32Num; i++)
+	{
+		pstFds[i].fd = -1;
+		pstFds[i].events= POLLIN;
+	}
+
+	return 0;	
+}
+
+s32 GetConFd(struct pollfd* pFds, const u32 u32Num)
+{
+	s32 i;
+	struct sockaddr_un addrcli = {0};
+	socklen_t addrlen = sizeof (addrcli);
+
+	if(NULL == pFds || 0 == u32Num)
+	{
+		return -1;
+	}
+	
+	for(i=1; i<u32Num; i++)
+	{
+		if(-1 ==pFds[i].fd )
+		{
+			break;
+		}
+	}
+	
+	pFds[i].fd = accept (pFds[0].fd , (struct sockaddr*)&addrcli, &addrlen);
+	if (pFds[i].fd == -1) 
+	{
+		dbg_perror ("accept");
+		return -1;
+	}
+
+	pFds[i].events= POLLIN;
+	
+	return 0;
+}
+
 int main()
 {
-	s32 s32ListenFd;
-	s32 s32ConFd =0;
-	s32 s32CmdFd = 0;
-	
-	s32 s32MaxFd = 0;
+	s32 i;	
 	s32 s32Ret;
-	fd_set stFds;
-	 struct timeval stTimeoutVal;
-
-	s32ListenFd = CreateSocket(SERVERPORT);
-	
-	s32MaxFd =s32ListenFd;
+	struct pollfd fds[CHNUM] = {};	 
 
 	signal(SIGINT, SAMPLE_VENC_HandleSig);
     	signal(SIGTERM, SAMPLE_VENC_HandleSig);
 	signal(SIGUSR1, SAMPLE_VENC_HandleSig);	
-
+	
+	s32Ret = InitFdSet(fds,  CHNUM);
+	if(s32Ret < 0)
+	{
+		dbg_printf(DBG_ERROR, "InitFdSet is failed\n");
+	}
+	
+	fds[0].fd = CreateSocket(SERVERPORT);
+	if(fds[0].fd  < 0)
+	{
+		dbg_printf(DBG_ERROR, "CreateSocket is failed!!!\n");
+		goto EXIT;
+	}
+	
 	while (1)
 	{	
-		FD_ZERO(&stFds);	
-		FD_SET(s32ListenFd,&stFds);
-		FD_SET(s32CmdFd,&stFds); 
-		FD_SET(stArgs.s32HDVideoDataFd,&stFds); 
-	
-		s32MaxFd = ( s32CmdFd > s32MaxFd) ? s32CmdFd : s32MaxFd;
-		s32MaxFd = ( stArgs.s32HDVideoDataFd > s32MaxFd) ? stArgs.s32HDVideoDataFd : s32MaxFd;
-	
-		stTimeoutVal.tv_sec  = 1;
-		stTimeoutVal.tv_usec = 0;
-		
-		s32Ret = select(s32MaxFd + 1, &stFds, NULL, NULL, &stTimeoutVal);
+		s32Ret = poll(fds, CHNUM, -1);
 		if (s32Ret < 0)
 		{
 			dbg_printf(DBG_ERROR, "select failed!\n");
@@ -861,63 +833,45 @@ int main()
 		}
 		else
 		{
-			if(FD_ISSET(s32ListenFd,&stFds)) 
-			{	
-				u32 u32Type;
-				s32ConFd= GetConFdAndChannalType(s32ListenFd,  &u32Type);
-				if(-1 == s32ConFd)
-				{
-					/*错误处理*/	
-					printf(" is wrong\n");
-				}
-				else if(CMD == u32Type)
-				{
-					s32CmdFd = s32ConFd;
-				}
-				else if(HDVIDEODATA == u32Type) 
-				{
-					stArgs.s32HDVideoDataFd = s32ConFd;
-				}	
-				else if(SDVIDEODATA == u32Type) 
-				{
-					stArgs.s32SDVideoDataFd = s32ConFd;
-				}
+			if(fds[0].revents & POLLIN) 
+			{			
+				 s32Ret = GetConFd(fds, CHNUM);
+				 if(s32Ret < 0)
+				 {
+				 	dbg_printf(DBG_ERROR, "GetConFd is failed!!!\n");
+					goto EXIT;
+				 }				
 			}
-			else if(FD_ISSET(s32CmdFd, &stFds))
-			{
-				Package stPackage;
-				s32 s32RLen;
-
-				s32RLen = recv(s32CmdFd, &stPackage, sizeof(Package), 0);
-				if(-1 == s32RLen)
+			else
+			{ 	
+				for(i = 1; i<CHNUM; i++)
 				{
-					dbg_perror("send");
-					return -1;
-				}
-				else if(0 == s32RLen)
-				{
-					s32CmdFd = 0;
-				}
-				else
-				{
-					s32Ret = ParamAndExcuteCmd(&stPackage);
-					if(-1 == s32Ret)
-					{
-						dbg_printf(DBG_ERROR, "can not excute the cmd !!!\n");
-					}
+					if(fds[i].revents & POLLIN)
+					{	
+						s32Ret =  GetCmdAndChannalType(fds[i].fd);
+						if(s32Ret < 0)
+						{
+							goto EXIT;
+						}
+						else if(0 == s32Ret)
+						{
+							close(fds[i].fd);
+							fds[i].fd = -1;
+							fds[i].events = 0;											
+						}
+						break;
+					}					
 				}
 			}				
 		}		
 	}
-	
+
 	return 0;
+
+EXIT:
+	/*错误处理*/
+	return -1;
 }
-
-
-
-
-
-
 
 
 
