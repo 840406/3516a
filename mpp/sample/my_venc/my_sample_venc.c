@@ -1,4 +1,9 @@
-
+/*******************************************************************
+* ∞Ê»®À˘”– (C) 2017, ±±æ© ”¡™∂Ø¡¶ø∆ºº∑¢’π”–œﬁπ´Àæ
+* Œƒº˛√˚≥∆£∫ my_sample_venc.c
+* ƒ⁄»›’™“™£∫ 4k≤˙∆∑3516a∂À≤…ºØdemo
+* ∆‰À¸Àµ√˜£∫ Œﬁ
+******************************************************************/
 
 #include "common.h"
 //#include "sample_comm.h"
@@ -10,10 +15,10 @@
 
 typedef struct my_sample_venc_getstream_s
 {
-    HI_BOOL bThreadStart;
-    HI_S32  s32Cnt;
-	s32 s32HDVideoDataFd;
-	s32 s32SDVideoDataFd;
+    HI_BOOL bThreadStart;    //  «∑Òø™∆Ùœﬂ≥Ã
+    HI_S32  s32Cnt;			//Õ®µ¿ ˝	
+	s32 s32HDVideoDataFd;	//	∏ﬂ«ÂÕ®µ¿µƒsocketŒƒº˛√Ë ˆ∑˚
+	s32 s32SDVideoDataFd;	//	±Í«ÂÕ®µ¿µƒsocketŒƒº˛√Ë ˆ∑
 } my_SAMPLE_VENC_GETSTREAM_PARA_S;
 
 
@@ -21,9 +26,20 @@ Args stArgs;
 my_SAMPLE_VENC_GETSTREAM_PARA_S my_gs_stPara;
 VIDEO_NORM_E gs_enNorm = VIDEO_ENCODING_MODE_NTSC;
 s32 g_StopVideoThread = 0;
+s32 g_CmdFd = 0;
 pthread_t g_VideoThread_t;
 pthread_t g_VencPid;
 
+
+/**********************************************************************
+* ∫Ø ˝√˚≥∆£∫ CreatePthread
+* π¶ƒ‹√Ë ˆ£∫¥¥Ω®œﬂ≥Ã∫Ø ˝
+*  ‰»Î≤Œ ˝£∫ SFun    :  void* (*Fun)(void*) –Õ, œﬂ≥Ã∫Ø ˝√˚
+				args	    :  	¥´µ›∏¯¥Àœﬂ≥Ãµƒ≤Œ ˝
+*  ‰≥ˆ≤Œ ˝£∫ Œﬁ
+* ∑µ ªÿ ÷µ£∫     ≥…π¶∑µªÿœﬂ≥ÃID£¨¥ÌŒÛ∑µªÿ-1
+* ∆‰À¸Àµ√˜£∫ Œﬁ
+***********************************************************************/
 pthread_t CreatePthread(Fun SFun, void* args)
 {
 	int iError;
@@ -80,7 +96,15 @@ pthread_t CreatePthread(Fun SFun, void* args)
 	return tTid;
 }
 
-int  CreateSocket(unsigned int port)
+/**********************************************************************
+* ∫Ø ˝√˚≥∆£∫ CreateSocket
+* π¶ƒ‹√Ë ˆ£∫ ¥¥Ω®TCPµƒsocket√Ë ˆ∑˚
+*  ‰»Î≤Œ ˝£∫ port	:  ∂Àø⁄∫≈
+*  ‰≥ˆ≤Œ ˝£∫ Œﬁ
+* ∑µ ªÿ ÷µ£∫     ≥…π¶∑µªÿsocket√Ë ˆ∑˚£¨¥ÌŒÛ∑µªÿ-1
+* ∆‰À¸Àµ√˜£∫ Œﬁ
+***********************************************************************/
+s32  CreateSocket(unsigned int port)
 {
 	int sockfd = socket (AF_INET, SOCK_STREAM, 0);	
 	if (sockfd == -1)
@@ -115,6 +139,15 @@ int  CreateSocket(unsigned int port)
 	return sockfd;
 }
 
+/**********************************************************************
+* ∫Ø ˝√˚≥∆£∫ SendStream
+* π¶ƒ‹√Ë ˆ£∫ œÚ3536 ∑¢ÀÕ±‡¬Î∫Ûµƒ ”∆µ¡˜	
+*  ‰»Î≤Œ ˝£∫ s32VideoDataFd	:  ∏ﬂ«ÂªÚ±Í«Âµƒsoecket√Ë ˆ∑˚
+ 				pstStream		:  ∫£Àºµƒ ”∆µ¡˜Ω·ππÃÂ÷∏’Î
+*  ‰≥ˆ≤Œ ˝£∫ Œﬁ
+* ∑µ ªÿ ÷µ£∫     ≥…π¶∑µªÿ0£¨¥ÌŒÛ∑µªÿ-1
+* ∆‰À¸Àµ√˜£∫ Œﬁ
+***********************************************************************/
 s32 SendStream(s32 s32VideoDataFd,  VENC_STREAM_S* pstStream)
 {
 	s32 i;
@@ -133,6 +166,49 @@ s32 SendStream(s32 s32VideoDataFd,  VENC_STREAM_S* pstStream)
 	return 0;
 }
 
+#if 0
+void* TestThread(void* args)
+{
+	Args* pstArg = (Args*)args;
+	//s32 fd = pstArg->s32HDVideoDataFd;
+	s32 s32Ret =0 ;
+	s8 as8Buf1[100] = {0};
+	s8 as8Buf2[100] = {0};
+
+	sprintf(as8Buf1, "this is HDThread == %d", stArgs.s32HDVideoDataFd);
+	sprintf(as8Buf2, "this is SDThread 23== %d", stArgs.s32SDVideoDataFd);
+	dbg_printf(DBG_INFO, "555-%s\n", as8Buf1);
+	dbg_printf(DBG_INFO, "555-%s\n", as8Buf2);
+
+	while(1)
+	{			
+		
+		sleep(1);
+		s32Ret = send(stArgs.s32SDVideoDataFd, as8Buf2, strlen(as8Buf2), 0);
+		if(s32Ret < 0)
+		{
+			dbg_perror("send");
+		}
+		printf("-=-=-=%d\n", s32Ret);	
+
+		sleep(1);
+		s32Ret = send(stArgs.s32HDVideoDataFd, as8Buf1, strlen(as8Buf1), 0);
+		if(s32Ret < 0)
+		{
+			dbg_perror("send");
+		}
+		printf("===%d\n", s32Ret);	
+	}
+}
+#endif
+/**********************************************************************
+* ∫Ø ˝√˚≥∆£∫ my_SAMPLE_COMM_VENC_StopGetStream
+* π¶ƒ‹√Ë ˆ£∫ Õ£÷πmy_SAMPLE_COMM_VENC_GetVencStreamProc œﬂ≥Ã	
+*  ‰»Î≤Œ ˝£∫ Œﬁ
+*  ‰≥ˆ≤Œ ˝£∫ Œﬁ
+* ∑µ ªÿ ÷µ£∫     ≥…π¶∑µªÿHI_SUCCESS£¨¥ÌŒÛ∑µªÿHI_FALSE
+* ∆‰À¸Àµ√˜£∫ Œﬁ
+***********************************************************************/
 HI_S32 my_SAMPLE_COMM_VENC_StopGetStream()
 {
     if (HI_TRUE == my_gs_stPara.bThreadStart)
@@ -143,7 +219,14 @@ HI_S32 my_SAMPLE_COMM_VENC_StopGetStream()
     return HI_SUCCESS;
 }
 
-
+/**********************************************************************
+* ∫Ø ˝√˚≥∆£∫ my_SAMPLE_COMM_VENC_GetVencStreamProc
+* π¶ƒ‹√Ë ˆ£∫ ªÒ»°±‡¬Î∫Ûµƒ ”∆µ¡˜£¨≤¢∑¢ÀÕ∏¯3536µƒœﬂ≥Ã	
+*  ‰»Î≤Œ ˝£∫ p	:  ¥´µ›∏¯¥Àœﬂ≥Ãµƒ≤Œ ˝
+*  ‰≥ˆ≤Œ ˝£∫ Œﬁ
+* ∑µ ªÿ ÷µ£∫     ∑µªÿNULL
+* ∆‰À¸Àµ√˜£∫ ≤Œøº∫£Àºdemo÷–µƒSAMPLE_COMM_VENC_GetVencStreamProc() ∫Ø ˝
+***********************************************************************/
 /******************************************************************************
 * funciton : get stream from each channels and save them
 ******************************************************************************/
@@ -197,8 +280,7 @@ HI_VOID* my_SAMPLE_COMM_VENC_GetVencStreamProc(HI_VOID* p)
     ******************************************/
     while (HI_TRUE == pstPara->bThreadStart)
     {
-    	printf("pstPara->bThreadStart == %d\n", pstPara->bThreadStart);
-        FD_ZERO(&read_fds);
+          FD_ZERO(&read_fds);
         for (i = 0; i < s32ChnTotal; i++)
         {
             FD_SET(VencFd[i], &read_fds);
@@ -219,7 +301,7 @@ HI_VOID* my_SAMPLE_COMM_VENC_GetVencStreamProc(HI_VOID* p)
         }
         else
         {
-            for (i = 0; i < s32ChnTotal; i++)
+             for (i = 0; i < s32ChnTotal; i++)
             {
                 if (FD_ISSET(VencFd[i], &read_fds))
                 {
@@ -274,13 +356,12 @@ HI_VOID* my_SAMPLE_COMM_VENC_GetVencStreamProc(HI_VOID* p)
                     /*******************************************************
                      step 2.5 : send stream
                     *******************************************************/
-                    printf("00000---i == %d\n", i);
-		  s32Ret = SendStream(as32VideoDataFd[i], &stStream);
+               s32Ret = SendStream(as32VideoDataFd[i], &stStream);
 		  if (HI_SUCCESS != s32Ret)
                    {
                         free(stStream.pstPack);
                         stStream.pstPack = NULL;
-                        SAMPLE_PRT("save stream failed!\n");
+                        SAMPLE_PRT("send stream failed!\n");
 		  }
 		 
                     /*******************************************************
@@ -305,15 +386,26 @@ HI_VOID* my_SAMPLE_COMM_VENC_GetVencStreamProc(HI_VOID* p)
     }
 
     /*******************************************************
-    * step 3 : close save-file
+    * step 3 : return 
     *******************************************************/
+	for(i=0; i<s32ChnTotal; i++)
+	{
+		close(as32VideoDataFd[i]);
+	}
 
 	printf("quit my_SAMPLE_COMM_VENC_GetVencStreamProc !!!\n");
     return NULL;
 }
 
 
-
+/**********************************************************************
+* ∫Ø ˝√˚≥∆£∫ my_SAMPLE_VENC_1080P_CLASSIC
+* π¶ƒ‹√Ë ˆ£∫ ≤…ºØ±‡¬ÎH264 œﬂ≥Ã	
+*  ‰»Î≤Œ ˝£∫ pArgs	:  ¥´µ›∏¯¥Àœﬂ≥Ãµƒ≤Œ ˝
+*  ‰≥ˆ≤Œ ˝£∫ Œﬁ
+* ∑µ ªÿ ÷µ£∫     ∑µªÿNULL
+* ∆‰À¸Àµ√˜£∫ ≤Œøº∫£Àºdemo÷–µƒSAMPLE_VENC_1080P_CLASSIC() ∫Ø ˝
+***********************************************************************/
 /******************************************************************************
 * function :  H.264@1080p@30fps+H.265@1080p@30fps+H.264@D1@30fps
 ******************************************************************************/
@@ -321,14 +413,13 @@ void* my_SAMPLE_VENC_1080P_CLASSIC(void* pArgs)
 {
 	Args* pstThreadArg = (Args*)pArgs;
 	
+	g_StopVideoThread = 0;
 	PAYLOAD_TYPE_E enHDPayLoad = PT_H264;
 	PAYLOAD_TYPE_E enSDPayLoad = PT_H264;
 
 	PIC_SIZE_E enHDSize = PIC_HD1080; //pstThreadArg->enHDPicSize;
 	PIC_SIZE_E enSDSize = PIC_D1;  //pstThreadArg->enSDPicSize;
 
-   // PAYLOAD_TYPE_E enPayLoad[3] = {PT_H264, PT_H265, PT_H264};
-   // PIC_SIZE_E enSize[3] = {PIC_HD1080, PIC_HD1080, PIC_D1};
     HI_U32 u32Profile = 0;
 
     VB_CONF_S stVbConf;
@@ -533,7 +624,7 @@ void* my_SAMPLE_VENC_1080P_CLASSIC(void* pArgs)
 
    while(0 == g_StopVideoThread)
    {
-	sleep(1);	
+	usleep(2000);	
    }
 
     /******************************************
@@ -567,6 +658,16 @@ END_VENC_1080P_CLASSIC_0:	//system exit
     return NULL;
 }
 
+/**********************************************************************
+* ∫Ø ˝√˚≥∆£∫ ParamAndExcuteCmd
+* π¶ƒ‹√Ë ˆ£∫ ∑÷Œˆ√¸¡Ó≤¢«“÷¥––√¸¡Ó		
+*  ‰»Î≤Œ ˝£∫ s32CmdFd 	:  √¸¡ÓÕ®µ¿µƒsocket√Ë ˆ∑˚
+				pstPackage	:   3536 ∑¢¿¥µƒ∞¸
+*  ‰≥ˆ≤Œ ˝£∫ Œﬁ
+* ∑µ ªÿ ÷µ£∫     ≥…π¶∑µªÿ0£¨¥ÌŒÛ∑µªÿ-1
+* ∆‰À¸Àµ√˜£∫ »Áπ˚ ’µΩStopVideo √¸¡Ó£¨œÚmy_SAMPLE_VENC_1080P_CLASSICœﬂ≥Ã
+				∑¢ÀÕSIGUSR1–≈∫≈
+***********************************************************************/
 s32 ParamAndExcuteCmd(s32 s32CmdFd, const Package* pstPackage)
 {	
 	s32 s32Ret;
@@ -575,17 +676,18 @@ s32 ParamAndExcuteCmd(s32 s32CmdFd, const Package* pstPackage)
 		return -1;
 	}
 
-	printf("---pstPackage.enChType ==%d, pstCmd.enOpt == %d\n",pstPackage->enChType, pstPackage->enOpt);
+	//printf("---pstPackage.enChType ==%d, pstCmd.enOpt == %d\n",pstPackage->enChType, pstPackage->enOpt);
 
 	if(CMD == pstPackage->enChType && StartVideo ==pstPackage->enOpt)
 	{
 		stArgs.enHDPicSize = pstPackage->enHDPicSize;
 		stArgs.enSDPicSize = pstPackage->enSDPicSize;
 		stArgs.s32VideoChNum = pstPackage->s32VideoChNum;
+		#if 1
 		g_VideoThread_t = CreatePthread(my_SAMPLE_VENC_1080P_CLASSIC, &stArgs);
-
-		//g_VideoThread_t = CreatePthread(TestThread, &stArgs);	
-		
+		#else
+		g_VideoThread_t = CreatePthread(TestThread, &stArgs);		
+		#endif
 	}
 
 	if(CMD == pstPackage->enChType && StopVideo ==pstPackage->enOpt)
@@ -606,7 +708,19 @@ s32 ParamAndExcuteCmd(s32 s32CmdFd, const Package* pstPackage)
 	return 0;
 }
 
-
+/**********************************************************************
+* ∫Ø ˝√˚≥∆£∫ GetCmdAndChannalType
+* π¶ƒ‹√Ë ˆ£∫ ªÒ»°µΩ3536a∂À∑¢ÀÕ¿¥µƒ√¸¡Ó∫ÕªÒ»°Õ®µ¿¿‡–Õ
+				Õ®µ¿¿‡–Õ    :
+				CMD  		  :	√¸¡ÓÕ®µ¿	
+				HDVIDEODATA   :	∏ﬂ«Â ”∆¡Õ®µ¿
+	  			SDVIDEODATA   :	±Í«Â ”∆µÕ®µ¿
+				AUDEODATA   	  :	“Ù∆µÕ®µ¿				
+*  ‰»Î≤Œ ˝£∫ s32ConFd 		  :	Õ®µ¿µƒsocket√Ë ˆ∑˚
+*  ‰≥ˆ≤Œ ˝£∫ Œﬁ
+* ∑µ ªÿ ÷µ£∫     ≥…π¶∑µªÿ0£¨¥ÌŒÛ∑µªÿ-1
+* ∆‰À¸Àµ√˜£∫ 3516a√ø ’µΩ“ª¥Œ√¸¡Ó∫Û£¨œÚ3536 ∑µªÿ“ª¥Œ"OK"
+***********************************************************************/
 s32 GetCmdAndChannalType(const s32 s32ConFd)
 {
 	s32 s32Ret;
@@ -615,12 +729,16 @@ s32 GetCmdAndChannalType(const s32 s32ConFd)
 	if(s32ConFd <= 0 )
 	{
 		return -1;
-	}		
+	}	
+
 	s32Ret = recv(s32ConFd, &stPackage, sizeof(stPackage), 0);
 	if(-1 == s32Ret)
 	{
-		dbg_perror("recv");
-		return -1;
+		if(ECONNRESET != errno)
+		{
+			dbg_perror("recv");
+			return -1;
+		}
 	}
 	else if(0 == s32Ret)
 	{
@@ -628,6 +746,7 @@ s32 GetCmdAndChannalType(const s32 s32ConFd)
 	}
 	else
 	{
+		//dbg_printf(DBG_DETAILED, "stPackage.enChType == %d, stPackage.enOpt == %d\n", stPackage.enChType, stPackage.enOpt);
 		if(HDVIDEODATA == stPackage.enChType)
 		{
 			stArgs.s32HDVideoDataFd = s32ConFd;
@@ -657,8 +776,9 @@ s32 GetCmdAndChannalType(const s32 s32ConFd)
 			}
 			dbg_printf(DBG_DETAILED, "this is heart\n");
 		}
-		else if(CMD == stPackage.enChType && 0 != stPackage.enOpt)
+		else if((CMD == stPackage.enChType) && (1== stPackage.enOpt))
 		{
+			g_CmdFd = s32ConFd;
 			if(-1 == ParamAndExcuteCmd(s32ConFd, &stPackage))
 			{
 				dbg_printf(DBG_ERROR, "can not excute the cmd !!!\n");
@@ -672,6 +792,7 @@ s32 GetCmdAndChannalType(const s32 s32ConFd)
 		}
 		else if(CMD == stPackage.enChType)
 		{
+			g_CmdFd = s32ConFd;
 			if(-1 == send(s32ConFd, "OK" ,strlen("OK"), 0) )
 			{
 				dbg_perror("send");
@@ -683,53 +804,20 @@ s32 GetCmdAndChannalType(const s32 s32ConFd)
 			dbg_printf(DBG_ERROR, "get wrong  Cmd\n");
 			return -1;
 		}
-
-		//dbg_printf(DBG_DETAILED, "222222222  pu32Type == %d\n", stPackage.enChType);
-		
 	}
 
 	return s32ConFd;
 }
 
-
-void* TestThread(void* args)
-{
-	Args* pstArg = (Args*)args;
-	//s32 fd = pstArg->s32HDVideoDataFd;
-	s32 s32Ret =0 ;
-	s8 as8Buf1[100] = {0};
-	s8 as8Buf2[100] = {0};
-
-	sprintf(as8Buf1, "this is HDThread == %d", stArgs.s32HDVideoDataFd);
-	sprintf(as8Buf2, "this is SDThread 23== %d", stArgs.s32SDVideoDataFd);
-	dbg_printf(DBG_INFO, "555-%s\n", as8Buf1);
-	dbg_printf(DBG_INFO, "555-%s\n", as8Buf2);
-
-	while(1)
-	{			
-		
-		sleep(1);
-		s32Ret = send(stArgs.s32SDVideoDataFd, as8Buf2, strlen(as8Buf2), 0);
-		if(s32Ret < 0)
-		{
-			dbg_perror("send");
-		}
-		//printf("-=-=-=%d\n", s32Ret);
-	
-
-		sleep(1);
-		s32Ret = send(stArgs.s32HDVideoDataFd, as8Buf1, strlen(as8Buf1), 0);
-		if(s32Ret < 0)
-		{
-			dbg_perror("send");
-		}
-		//printf("===%d\n", s32Ret);
-
-	
-	}
-	
-}
-
+/**********************************************************************
+* ∫Ø ˝√˚≥∆£∫ SAMPLE_VENC_HandleSig
+* π¶ƒ‹√Ë ˆ£∫ œÚœµÕ≥◊¢≤·–≈∫≈
+*  ‰»Î≤Œ ˝£∫ HI_S32 signo: –≈∫≈÷µ
+*  ‰≥ˆ≤Œ ˝£∫ Œﬁ
+* ∑µ ªÿ ÷µ£∫ 	Œﬁ
+* ∆‰À¸Àµ√˜£∫ SIGUSR1–≈∫≈ «÷˜œﬂ≥ÃœÚ  my_SAMPLE_VENC_1080P_CLASSICœﬂ≥Ã∑¢ÀÕµƒ–≈∫≈
+				SIGPIPE–≈∫≈ « TCP∂œø™¡¨Ω” ±ªÒ»°µΩµƒ–≈∫≈
+***********************************************************************/
 void SAMPLE_VENC_HandleSig(HI_S32 signo)
 {
     if (SIGINT == signo || SIGTERM == signo)
@@ -740,13 +828,20 @@ void SAMPLE_VENC_HandleSig(HI_S32 signo)
 	exit(-1);
     }
 
-	if(SIGUSR1 ==signo)
+	if(SIGUSR1 ==signo ||SIGPIPE ==signo) 
 	{
 		g_StopVideoThread = 1;
-	}
-    
+	}    
 }
 
+/**********************************************************************
+* ∫Ø ˝√˚≥∆£∫ InitFdSet
+* π¶ƒ‹√Ë ˆ£∫ ≥ı ºªØstruct pollfd Ω·ππÃÂ
+*  ‰»Î≤Œ ˝£∫	u32Num:  Õ®µ¿ ˝ 
+*  ‰≥ˆ≤Œ ˝£∫ pFds:   	 struct pollfd* ––Ω·ππÃÂ£¨poll()∫Ø ˝–Ë“™
+* ∑µ ªÿ ÷µ£∫ 	≥…π¶∑µªÿ0£¨¥ÌŒÛ∑µªÿ-1
+* ∆‰À¸Àµ√˜£∫ Œﬁ
+***********************************************************************/
 s32 InitFdSet(struct pollfd* pstFds, const u32 u32Num)
 {
 	s32 i;
@@ -765,6 +860,15 @@ s32 InitFdSet(struct pollfd* pstFds, const u32 u32Num)
 	return 0;	
 }
 
+/**********************************************************************
+* ∫Ø ˝√˚≥∆£∫ GetConFd
+* π¶ƒ‹√Ë ˆ£∫ ªÒ»°”Î3536a∂ÀÕ®–≈µƒsocket√Ë ˆ∑˚
+*  ‰»Î≤Œ ˝£∫	u32Num:  Õ®µ¿ ˝ 
+*  ‰≥ˆ≤Œ ˝£∫ pFds:   struct pollfd* ––Ω·ππÃÂ£¨poll()∫Ø ˝–Ë“™
+* ∑µ ªÿ ÷µ£∫ 	’˝»∑∑µªÿ0£¨¥ÌŒÛ∑µªÿ-1
+* ∆‰À¸Àµ√˜£∫ Õ®π˝accept()∫Ø ˝ªÒ»°µΩsocket√Ë ˆ∑˚£¨»ª∫ÛΩ´√Ë ˆ∑˚
+				∏∂∏¯pFds[i].fd
+***********************************************************************/
 s32 GetConFd(struct pollfd* pFds, const u32 u32Num)
 {
 	s32 i;
@@ -805,6 +909,7 @@ int main()
 	signal(SIGINT, SAMPLE_VENC_HandleSig);
     	signal(SIGTERM, SAMPLE_VENC_HandleSig);
 	signal(SIGUSR1, SAMPLE_VENC_HandleSig);	
+	signal(SIGPIPE, SAMPLE_VENC_HandleSig);	
 	
 	s32Ret = InitFdSet(fds,  CHNUM);
 	if(s32Ret < 0)
@@ -855,7 +960,7 @@ int main()
 						}
 						else if(0 == s32Ret)
 						{
-							close(fds[i].fd);
+							close(g_CmdFd);
 							fds[i].fd = -1;
 							fds[i].events = 0;											
 						}
@@ -866,10 +971,20 @@ int main()
 		}		
 	}
 
-	return 0;
+	//return 0;
 
 EXIT:
 	/*¥ÌŒÛ¥¶¿Ì*/
+	for(i=0; i<CHNUM; i++)
+	{
+		if(fds[i].fd > 0)
+		{
+			close(fds[i].fd);
+		}
+	}
+	
+        SAMPLE_COMM_ISP_Stop();
+        SAMPLE_COMM_SYS_Exit();
 	return -1;
 }
 
